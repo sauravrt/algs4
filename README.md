@@ -1,4 +1,4 @@
-# algs4
+# algs4 : SRT learns Algorithms!
 
 Assignments:
 - Percolation: Write a program to estimate the value of the percolation threshold via Monte Carlo simulation. Used WeightedQuickUnion data structure to efficiently model system percolation.
