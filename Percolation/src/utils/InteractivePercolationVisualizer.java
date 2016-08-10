@@ -2,7 +2,6 @@
  *  Compilation:  javac InteractivePercolationVisualizer.java
  *  Execution:    java InteractivePercolationVisualizer N
  *  Dependencies: PercolationVisualizer.java Percolation.java
- *                StdDraw.java StdOut.java
  *
  *  This program takes the grid size N as a command-line argument.
  *  Then, the user repeatedly clicks sites to open with the mouse.
@@ -11,25 +10,27 @@
  *
  ******************************************************************************/
 package utils;
-import main.Percolation;
+
 import edu.princeton.cs.algs4.StdDraw;
 import edu.princeton.cs.algs4.StdOut;
-
+import main.Percolation;
 public class InteractivePercolationVisualizer {
+    private static final int DELAY = 20;
 
     public static void main(String[] args) {
         // N-by-N percolation system (read from command-line, default = 10)
         int N = 10;          
         if (args.length == 1) N = Integer.parseInt(args[0]);
 
+        // turn on animation mode
+        StdDraw.show(0);
+
         // repeatedly open site specified my mouse click and draw resulting system
         StdOut.println(N);
 
-        StdDraw.show(0);
         Percolation perc = new Percolation(N);
         PercolationVisualizer.draw(perc, N);
-        StdDraw.show(0);
-
+        StdDraw.show(DELAY);
         while (true) {
 
             // detected mouse click
@@ -40,11 +41,11 @@ public class InteractivePercolationVisualizer {
                 double y = StdDraw.mouseY();
 
                 // convert to row i, column j
-                int i = (int) (N - Math.floor(y));
-                int j = (int) (1 + Math.floor(x));
+                int i = (int) (N - Math.floor(y) - 1);
+                int j = (int) (Math.floor(x));
 
                 // open site (i, j) provided it's in bounds
-                if (i >= 1 && i <= N && j >= 1 && j <= N) {
+                if (i >= 0 && i < N && j >= 0 && j < N) {
                     if (!perc.isOpen(i, j)) { 
                         StdOut.println(i + " " + j);
                     }
@@ -52,10 +53,9 @@ public class InteractivePercolationVisualizer {
                 }
 
                 // draw N-by-N percolation system
-                StdDraw.show(0);
                 PercolationVisualizer.draw(perc, N);
             }
-            StdDraw.show(20);
+            StdDraw.show(DELAY);
         }
     }
 }
