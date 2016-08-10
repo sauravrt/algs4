@@ -13,10 +13,11 @@ import edu.princeton.cs.algs4.QuickUnionUF;
 import java.util.Arrays;
 public class Percolation {
 	private QuickUnionUF gridUF;
-	private boolean[] gridOpen;
-	private boolean[] gridFull;
+	private boolean[] gridOpen;	
 	private int N;
 	private int numOpenSites;
+	private int virtualTop;
+	private int virtualBottom;
 			
 /**
  * Constructor initializes N-by-N grid of blocked sites. A block site is 
@@ -30,92 +31,93 @@ public class Percolation {
     	 * the index N*N + 1 corresponds to the bottom virtual site. Index 0 to (N*N - 1) 
     	 * correspond to the test sites.
     	 */
-    	gridOpen = new boolean[N*N + 2];
-    	gridFull = new boolean[N*N + 2];
-    	gridUF = new QuickUnionUF(N*N + 2);
-    	for(int i = 0; i < N*N + 2; i++) {
-    		this.gridOpen[i] = false;
-    		this.gridFull[i] = false;  
-    	}
-    	
+    	if (N <= 0)
+    		throw new IllegalArgumentException("N must be > 0");
     	this.N = N;
     	this.numOpenSites = 0;
-    }
-    
-    private int xyToLinear(int i, int j) {
-    	if (i <= 0) {
-    		return (N * N);
-    	} else if (i >= (N - 1)) {
-    		return (N * N + 1);
-    	} else if ((j - 1) < 0) {
-    		return (i * N);
-    	} else if ((j + 1) > (N - 1)) {
-    		return (i * N + N - 1);
-    	} else	{    	
-    		return (i * N + j);
+    	this.virtualTop = N*N;
+    	this.virtualBottom = N*N + 1;    	
+    	this.gridOpen = new boolean[N*N];    	//
+    	gridUF = new QuickUnionUF(N*N + 2);
     	}
+    
+    /**
+     * Map from a 2-dimensional (row, column) pair to a 1-dimensional 
+     * union find object index
+     * @param i Row index
+     * @param j Column index
+     * @return 1-D linear coordinate p = i*N + j
+     */
+    private int xyToLinear(int i, int j) {    	
+    	if((i < 0) || (i > (N-1)) || (j < 0) || (j > (N-1))) {
+    		return -1;
+    	} else {
+    		return (i * N + j);    	
+    	}    	
     }
     
     public void open(int i, int j) {
     	// Any adjacent sites open?
     	// if yes connect to one else connect to self.
     	
-    	int siteIndex = xyToLinear(i, j);
-    	if (!gridOpen[siteIndex]) {  // if not open
-    		gridOpen[siteIndex] = true;
-    		numOpenSites = numOpenSites + 1;
-    		
-        	if (gridOpen[xyToLinear(i - 1, j)]) {
-        		gridUF.union(xyToLinear(i - 1, j), siteIndex);
-        	} else if (gridOpen[xyToLinear(i + 1, j)]) {
-        		gridUF.union(xyToLinear(i + 1, j), siteIndex);
-        	} else if (gridOpen[xyToLinear(i, j + 1)]) {
-        		gridUF.union(siteIndex, xyToLinear(i, j + 1));
-        	} else if (gridOpen[xyToLinear(i, j - 1)]) {
-        		gridUF.union(siteIndex,  xyToLinear(i, j - 1));
-        	}    		
-    	}    
-    	flow(i, j);
-    }
-    
-    // determine set of full sites using depth first search
-    public void flow(int i, int j) {
-        int N = gridOpen.length - 2;
+    	int p = xyToLinear(i, j);
+    	if (!gridOpen[p]) {  // if not open
+    		gridOpen[p] = true;
+    		numOpenSites++;
+    	}       	    	
+    	// union with neighbors
+    	connectToNeighbors(i, j);
+    }	
+   
+    private void connectToNeighbors(int i, int j) {
+		// 
+    	int p = xyToLinear(i, j);
+		int[] nhd = {xyToLinear(i + 1, j),
+				xyToLinear(i - 1, j),
+				xyToLinear(i, j - 1),
+				xyToLinear(i, j + 1)};
+		
+		for(int itr=0; itr < nhd.length; itr++){
+			int q = nhd[itr];
+			if(q != -1 && gridOpen[q]==true) {
+				gridUF.union(p, q);
+			}
+		}
+		if (i == 0) {
+			gridUF.union(p, virtualTop);			
+		} else if (i == N -1) {
+			gridUF.union(virtualBottom, p);
+		}
+	}
 
-        // base cases
-        if (i < 0 || i >= N) return;    // invalid row
-        if (j < 0 || j >= N) return;    // invalid column
-        if (!gridOpen[xyToLinear(i, j)]) return;      // not an open site
-        if (gridFull[xyToLinear(i, j)]) return;       // already marked as full
-
-        // mark i-j as full
-        gridFull[xyToLinear(i, j)] = true;
-
-        flow(i+1, j);   // down
-        flow(i, j+1);   // right
-        flow(i, j-1);   // left
-        flow(i-1, j);   // up
-    }
-
-
-    public boolean isOpen(int i, int j){
+	public boolean isOpen(int i, int j){
     	/*
     	 * A site is open if it is connected to any one of adjacent site
     	 */    	
+		checkIndex(i, j);
     	return gridOpen[xyToLinear(i, j)];
     }
 
     public boolean isFull(int i, int j) {
-    	// A site is full if it is connected to the top row (virtual point)    
-        return gridFull[xyToLinear(i, j)];
+    	// A site is full if it is connected to the top row (virtual point)
+    	checkIndex(i, j);
+    	int q = xyToLinear(i, j);
+    	return gridUF.connected(this.virtualTop, q);
     }
+    
     public boolean percolates() {
     	// percolates if top and bottom virtual sites are connected    	
-        return gridUF.connected(N * N, N * N + 1);
+        return gridUF.connected(this.virtualBottom, this.virtualTop);
     }
     
     public int numberOfOpenSites() {
     	return numOpenSites;
+    }
+    
+    private void checkIndex(int i, int j) {
+    	if((i < 0) || (i > (N-1)) || (j < 0) || (j > (N-1))) {
+    		throw  new java.lang.IndexOutOfBoundsException();
+    	}
     }
 
     public static void main(String[] args) {
@@ -125,6 +127,6 @@ public class Percolation {
     	System.out.println(perc.isOpen(testRow, testCol));
     	perc.open(testRow, testCol);
     	System.out.println(perc.isOpen(testRow, testCol));    	
-	}
+	}    
 }
 
